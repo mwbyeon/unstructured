@@ -191,26 +191,25 @@ def partition_docx(
 class _DocxPartitioner:
     """Provides `.partition()` for MS-Word 2007+ (.docx) files."""
 
-    # TODO: I think we can do better on metadata.filename. Should that only be populated when a
-    #       `metadata_filename` argument was provided to `partition_docx()`? What about when not but
-    #       we do get a `filename` arg or a `file` arg that has a `.name` attribute?
-    # TODO: get last-modified date from document-properties (stored in docx package) rather than
-    #       relying on last filesystem-write date; maybe fall-back to filesystem-date.
     # TODO: improve `._element_contains_pagebreak()`. It uses substring matching on the rendered
     #       XML text which is error-prone and not performant. Use XPath instead with the specific
     #       locations a page-break can be located. Also, there can be more than one, so return a
     #       count instead of a boolean.
+
     # TODO: Improve document-contains-pagebreaks algorithm to use XPath and to search for
     #       `w:lastRenderedPageBreak` alone. Make it independent and don't rely on anything like
     #        the "_element_contains_pagebreak()" function.
-    # TODO: Improve ._is_list_item() to include list-styles such that telling whether a paragraph is
-    #       a list-item is encapsulated in a single place rather than distributed around the code.
-    # TODO: Improve ._is_list_item() method of detecting a numbered-list-item to use XPath instead
-    #       of a substring match on the rendered XML. Include all permutations of how a numbered
-    #       list can be manually applied (as opposed to by using a style).
+
+    # TODO: Improve ._is_list_item():
+    #     - Include list-style check such that ._is_list_item() is definitive and strictly fulfills
+    #       its contract. This allows it to be used in other contexts without relying on
+    #       ._style_based_element_type() to detected some cases.
+    #     - Use XPath instead of substring match on the rendered XML.
+
     # TODO: Move _SectBlockIterator upstream into `python-docx`. It requires too much
     #       domain-specific knowledge to comfortable here and is of general use so welcome in the
     #       library.
+
     # TODO: Move Paragraph._get_paragraph_runs() monkey-patch upstream to `python-docx`.
 
     def __init__(
