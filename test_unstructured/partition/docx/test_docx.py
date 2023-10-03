@@ -17,6 +17,7 @@ from unstructured.documents.elements import (
     Header,
     ListItem,
     NarrativeText,
+    PageBreak,
     Table,
     Text,
     Title,
@@ -220,6 +221,79 @@ def test_partition_docx_includes_page_breaks():
     assert elements[-2].metadata.page_number == 2
     for element in elements:
         assert element.metadata.filename == "test-handbook-1p.docx"
+
+
+def test_partition_docx_places_page_breaks_precisely_where_they_occur():
+    """Page-break behavior has some subtleties.
+
+    * A hard page-break does not generate a PageBreak element (because that would double-count it).
+      Word inserts a rendered page-break for the hard break at the effective location.
+    * A (rendered) page-break mid-paragraph produces two elements, like `Text, PageBreak, Text`, so
+      each Text (subclass) element gets the right page-number.
+    * A rendered page-break mid-hyperlink produces two text elements, but the hyperlink itself is
+      not split; the entire hyperlink goes on the page where the hyperlink starts, even though some
+      of its text appears on the following page. The rest of the paragraph, after the hyperlink,
+      appears on the following page.
+    * Odd and even-page section starts can lead to two page-breaks, like an odd-page section start
+      could go from page 3 to page 5 because 5 is the next odd page.
+    """
+
+    # -- a more detailed "repr()" to aid debugging when assertion fails --
+    def str_repr(e: Element) -> str:
+        return f"{e.__class__.__name__}('{e}')"
+
+    expected = [
+        # -- page 1 --
+        NarrativeText(
+            "First page, tab here:\t"
+            "followed by line-break here:\n"
+            "here:\n"
+            "and here:\n"
+            "no-break hyphen here:-"
+            "and hard page-break here>>"
+        ),
+        PageBreak(""),
+        # -- page 2 --
+        NarrativeText(
+            "<<Text on second page. The font is big so it breaks onto third page--"
+            "------------------here-->> <<but break falls inside link so text stays"
+            " together."
+        ),
+        PageBreak(""),
+        # -- page 3 --
+        NarrativeText("Continuous section break here>>"),
+        NarrativeText("<<followed by text on same page"),
+        NarrativeText("Odd-page section break here>>"),
+        PageBreak(""),
+        # -- page 4 --
+        PageBreak(""),
+        # -- page 5 --
+        NarrativeText("<<producing two page-breaks to get from page-3 to page-5."),
+        NarrativeText(
+            'Then text gets big again so a "natural" rendered page break happens again here>> '
+        ),
+        PageBreak(""),
+        # -- page 6 --
+        Title("<<and then more text proceeds."),
+    ]
+
+    elements = partition_docx(get_test_file_path("page-breaks.docx"))
+
+    for idx, e in enumerate(elements):
+        assert e == expected[idx], (
+            f"\n\nExpected: {str_repr(expected[idx])}"
+            # --
+            f"\n\nGot:      {str_repr(e)}\n"
+        )
+    # -- Emphasis should look like this on the fifth element:
+    # -- <b>Continuous</b><i> section <b>break here>></b></i> --
+    assert elements[4].metadata.emphasized_text_contents == [
+        "Continuous",
+        "section",
+        "break here>>",
+        "break here>>",
+    ]
+    assert elements[4].metadata.emphasized_text_tags == ["b", "i", "b", "i"]
 
 
 def test_partition_docx_detects_lists(filename="example-docs/example-list-items-multiple.docx"):
