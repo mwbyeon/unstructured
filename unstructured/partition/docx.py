@@ -254,6 +254,48 @@ class _DocxPartitioner:
 
             yield from self._iter_section_footers(section)
 
+    def _classify_paragraph_to_element(self, paragraph: Paragraph) -> Iterator[Element]:
+        """Generate zero-or-one document element for `paragraph`.
+
+        In Word, an empty paragraph is commonly used for inter-paragraph spacing. An empty paragraph
+        does not contribute to the document-element stream and will not cause an element to be
+        emitted.
+        """
+        text = paragraph.text
+
+        # -- blank paragraphs are commonly used for spacing between paragraphs and
+        # -- do not contribute to the document-element stream.
+        if not text.strip():
+            return
+
+        metadata = self._paragraph_metadata(paragraph)
+
+        # -- a list gets some special treatment --
+        if self._is_list_item(paragraph):
+            clean_text = clean_bullets(text).strip()
+            if clean_text:
+                yield ListItem(
+                    text=clean_text,
+                    metadata=metadata,
+                    detection_origin=DETECTION_ORIGIN,
+                )
+            return
+
+        # -- determine element-type from an explicit Word paragraph-style if possible --
+        TextSubCls = self._style_based_element_type(paragraph)
+        if TextSubCls:
+            yield TextSubCls(text=text, metadata=metadata, detection_origin=DETECTION_ORIGIN)
+            return
+
+        # -- try to recognize the element type by parsing its text --
+        TextSubCls = self._parse_paragraph_text_for_element_type(paragraph)
+        if TextSubCls:
+            yield TextSubCls(text=text, metadata=metadata, detection_origin=DETECTION_ORIGIN)
+            return
+
+        # -- if all that fails we give it the default `Text` element-type --
+        yield Text(text, metadata=metadata, detection_origin=DETECTION_ORIGIN)
+
     @lazyproperty
     def _document(self) -> Document:
         """The python-docx `Document` object loaded from file or filename."""
@@ -310,40 +352,7 @@ class _DocxPartitioner:
         does not contribute to the document-element stream and will not cause an element to be
         emitted.
         """
-        text = paragraph.text
-
-        # -- blank paragraphs are commonly used for spacing between paragraphs and
-        # -- do not contribute to the document-element stream.
-        if not text.strip():
-            return
-
-        metadata = self._paragraph_metadata(paragraph)
-
-        # -- a list gets some special treatment --
-        if self._is_list_item(paragraph):
-            clean_text = clean_bullets(text).strip()
-            if clean_text:
-                yield ListItem(
-                    text=clean_text,
-                    metadata=metadata,
-                    detection_origin=DETECTION_ORIGIN,
-                )
-            return
-
-        # -- determine element-type from an explicit Word paragraph-style if possible --
-        TextSubCls = self._style_based_element_type(paragraph)
-        if TextSubCls:
-            yield TextSubCls(text=text, metadata=metadata, detection_origin=DETECTION_ORIGIN)
-            return
-
-        # -- try to recognize the element type by parsing its text --
-        TextSubCls = self._parse_paragraph_text_for_element_type(paragraph)
-        if TextSubCls:
-            yield TextSubCls(text=text, metadata=metadata, detection_origin=DETECTION_ORIGIN)
-            return
-
-        # -- if all that fails we give it the default `Text` element-type --
-        yield Text(text, metadata=metadata, detection_origin=DETECTION_ORIGIN)
+        yield from self._classify_paragraph_to_element(paragraph)
 
     def _iter_maybe_paragraph_page_breaks(self, paragraph: Paragraph) -> Iterator[PageBreak]:
         """Generate a `PageBreak` document element for each page-break in `paragraph`.
