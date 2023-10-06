@@ -1,4 +1,4 @@
-## 0.10.20-dev5
+## 0.10.20-dev6
 
 ### Enhancements
 
@@ -8,6 +8,8 @@
 * **Improve title detection in pptx documents** The default title textboxes on a pptx slide are now categorized as titles.
 * **Improve hierarchy detection in pptx documents** List items, and other slide text are properly nested under the slide title. This will enable better chunking of pptx documents.
 * **Refactor of the ingest cli workflow** The refactored approach uses a dynamically set pipeline with a snapshot along each step to save progress and accommodate continuation from a snapshot if an error occurs. This also allows the pipeline to dynamically assign any number of steps to modify the partitioned content before it gets written to a destination.
+* **Ingest destination connectors support for writing raw list of elements** Along with the default write method used in the ingest pipeline to write the json content associated with the ingest docs, each destination connector can now also write a raw list of elements to the desired downstream location without having an ingest doc associated with it.
+
 ### Features
 
 * **Adds detection_origin field to metadata** Problem: Currently isn't an easy way to find out how an element was created. With this change that information is added. Importance: With this information the developers and users are now able to know how an element was created to make decisions on how to use it. In order tu use this feature
