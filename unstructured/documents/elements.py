@@ -20,7 +20,6 @@ from unstructured.documents.coordinates import (
     CoordinateSystem,
     RelativeCoordinateSystem,
 )
-from unstructured.partition.utils.constants import UNSTRUCTURED_INCLUDE_DEBUG_METADATA
 
 
 class NoID(abc.ABC):
@@ -193,14 +192,9 @@ class ElementMetadata:
     # Detection Model Class Probabilities from Unstructured-Inference Hi-Res
     detection_class_prob: Optional[float] = None
 
-    if UNSTRUCTURED_INCLUDE_DEBUG_METADATA:
-        detection_origin: Optional[str] = None
-
-    def __setattr__(self, key, value):
-        if not UNSTRUCTURED_INCLUDE_DEBUG_METADATA and key == "detection_origin":
-            return
-        else:
-            super().__setattr__(key, value)
+    # -- which detection mechanism is responsible for this element, for debugging purposes.
+    # -- should only be populated when UNSTRUCTURED_INCLUDE_DEBUG_METADATA flag is True.
+    detection_origin: Optional[str] = None
 
     def __post_init__(self):
         if isinstance(self.filename, pathlib.Path):
