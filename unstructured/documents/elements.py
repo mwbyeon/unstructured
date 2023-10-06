@@ -192,9 +192,11 @@ class ElementMetadata:
     # Detection Model Class Probabilities from Unstructured-Inference Hi-Res
     detection_class_prob: Optional[float] = None
 
-    # -- which detection mechanism is responsible for this element, for debugging purposes.
-    # -- should only be populated when UNSTRUCTURED_INCLUDE_DEBUG_METADATA flag is True.
-    detection_origin: Optional[str] = None
+    # -- The detection mechanism responsible for this element, for debugging purposes. Should
+    # -- only be populated when UNSTRUCTURED_INCLUDE_DEBUG_METADATA flag is True. Note
+    # -- `compare=False` setting meaning it's value does not affect equality (`.__eq__()`)
+    # -- comparison between two ElementMetadata instance.
+    detection_origin: Optional[str] = dc.field(default=None, compare=False)
 
     def __post_init__(self):
         if isinstance(self.filename, pathlib.Path):
