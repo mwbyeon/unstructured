@@ -1,10 +1,13 @@
+import json
 import os
 import re
+import tempfile
 import typing as t
 from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path, PurePath
 
+from unstructured.documents.elements import Element
 from unstructured.ingest.error import SourceConnectionError
 from unstructured.ingest.interfaces import (
     BaseConnectorConfig,
@@ -16,6 +19,7 @@ from unstructured.ingest.interfaces import (
     SourceMetadata,
 )
 from unstructured.ingest.logger import logger
+from unstructured.staging.base import convert_to_dict
 from unstructured.utils import (
     requires_dependencies,
 )
@@ -233,6 +237,22 @@ class FsspecDestinationConnector(BaseDestinationConnector):
         self.fs: AbstractFileSystem = get_filesystem_class(self.connector_config.protocol)(
             **self.connector_config.get_access_kwargs(),
         )
+
+    def write_elements(self, elements: t.List[Element]) -> None:
+        from fsspec import AbstractFileSystem, get_filesystem_class
+
+        fs: AbstractFileSystem = get_filesystem_class(self.connector_config.protocol)(
+            **self.connector_config.get_access_kwargs(),
+        )
+
+        logger.info(f"Writing content using filesystem: {type(fs).__name__}")
+
+        s3_path = self.connector_config.path
+        element_dict = convert_to_dict(elements)
+        with tempfile.NamedTemporaryFile(mode="w+") as tmp_file:
+            json.dump(element_dict, tmp_file)
+            logger.debug(f"Uploading {tmp_file.name} -> {s3_path}")
+            fs.put_file(lpath=tmp_file.name, rpath=s3_path)
 
     def write(self, docs: t.List[BaseIngestDoc]) -> None:
         from fsspec import AbstractFileSystem, get_filesystem_class
