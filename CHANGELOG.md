@@ -10,6 +10,7 @@
 * **Improve hierarchy detection in pptx documents** List items, and other slide text are properly nested under the slide title. This will enable better chunking of pptx documents.
 * **Refactor of the ingest cli workflow** The refactored approach uses a dynamically set pipeline with a snapshot along each step to save progress and accommodate continuation from a snapshot if an error occurs. This also allows the pipeline to dynamically assign any number of steps to modify the partitioned content before it gets written to a destination.
 * **Applies `max_characters=<n>` argument to all element types in `add_chunking_strategy` decorator** Previously this argument was only utilized in chunking Table elements and now applies to all partitioned elements if `add_chunking_strategy` decorator is utilized, further preparing the elements for downstream processing.
+* **Improve JSON round-trip tests.** Ensure that partitioning results are preserved across a round-trip through JSON, i.e. re-loading elements from JSON is the same as partitioning the document again and JSON is a safe alternative to repeated partitioning in a multi-pass process.
 
 ### Features
 
