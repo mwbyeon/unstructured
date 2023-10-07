@@ -17,9 +17,9 @@ from unstructured.documents.elements import (
     Title,
 )
 from unstructured.partition import ocr, pdf, strategies
-from unstructured.partition.json import partition_json
 from unstructured.partition.utils.constants import UNSTRUCTURED_INCLUDE_DEBUG_METADATA
-from unstructured.staging.base import elements_to_json
+
+from ...unit_utils import assert_round_trips_through_JSON, example_doc_path
 
 
 class MockResponse:
@@ -780,21 +780,12 @@ def test_partition_pdf_from_file_with_hi_res_strategy_custom_metadata_date(
     assert elements[0].metadata.last_modified == expected_last_modification_date
 
 
-@pytest.mark.parametrize(
-    "strategy",
-    ["fast", "hi_res"],
-)
-def test_partition_pdf_with_json(
-    strategy,
-    filename="example-docs/layout-parser-paper-fast.pdf",
-):
-    elements = pdf.partition_pdf(filename=filename, strategy=strategy)
-    test_elements = partition_json(text=elements_to_json(elements))
-
-    assert len(elements) == len(test_elements)
-
-    for i in range(len(elements)):
-        assert elements[i] == test_elements[i]
+@pytest.mark.parametrize("strategy", ["fast", "hi_res"])
+def test_partition_pdf_with_json(strategy: str):
+    elements = pdf.partition_pdf(
+        example_doc_path("layout-parser-paper-fast.pdf"), strategy=strategy
+    )
+    assert_round_trips_through_JSON(elements)
 
 
 def test_partition_pdf_with_ocr_has_coordinates_from_filename(

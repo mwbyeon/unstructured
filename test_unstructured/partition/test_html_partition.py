@@ -11,8 +11,8 @@ from unstructured.cleaners.core import clean_extra_whitespace
 from unstructured.documents.elements import EmailAddress, ListItem, NarrativeText, Table, Title
 from unstructured.documents.html import HTMLTitle
 from unstructured.partition.html import partition_html
-from unstructured.partition.json import partition_json
-from unstructured.staging.base import elements_to_json
+
+from ..unit_utils import assert_round_trips_through_JSON, example_doc_path
 
 DIRECTORY = pathlib.Path(__file__).parent.resolve()
 
@@ -610,15 +610,8 @@ def test_partition_html_grabs_emphasized_texts():
 
 
 def test_partition_html_with_json():
-    directory = os.path.join(DIRECTORY, "..", "..", "example-docs")
-    filename = os.path.join(directory, "example-10k.html")
-    elements = partition_html(filename=filename)
-    test_elements = partition_json(text=elements_to_json(elements))
-
-    assert len(elements) == len(test_elements)
-    assert elements[0].metadata.filename == test_elements[0].metadata.filename
-    for i in range(len(elements)):
-        assert elements[i] == test_elements[i]
+    elements = partition_html(example_doc_path("example-10k.html"))
+    assert_round_trips_through_JSON(elements)
 
 
 def test_pre_tag_parsing_respects_order():

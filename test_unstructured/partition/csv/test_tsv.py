@@ -8,9 +8,9 @@ from test_unstructured.partition.test_constants import (
 )
 from unstructured.cleaners.core import clean_extra_whitespace
 from unstructured.documents.elements import Table
-from unstructured.partition.json import partition_json
 from unstructured.partition.tsv import partition_tsv
-from unstructured.staging.base import elements_to_json
+
+from ...unit_utils import assert_round_trips_through_JSON, example_doc_path
 
 EXPECTED_FILETYPE = "text/tsv"
 
@@ -172,21 +172,7 @@ def test_partition_tsv_from_file_with_custom_metadata_date(
     assert elements[0].metadata.last_modified == expected_last_modification_date
 
 
-@pytest.mark.parametrize(
-    ("filename"),
-    ["stanley-cups.tsv", "stanley-cups-with-emoji.tsv"],
-)
-def test_partition_tsv_with_json(filename):
-    f_path = f"example-docs/{filename}"
-    elements = partition_tsv(filename=f_path)
-
-    test_elements = partition_json(text=elements_to_json(elements))
-
-    assert len(elements) == len(test_elements)
-    assert clean_extra_whitespace(elements[0].text) == clean_extra_whitespace(test_elements[0].text)
-    assert elements[0].metadata.text_as_html == test_elements[0].metadata.text_as_html
-    assert elements[0].metadata.page_number == test_elements[0].metadata.page_number
-    assert elements[0].metadata.filename == test_elements[0].metadata.filename
-
-    for i in range(len(elements)):
-        assert elements[i] == test_elements[i]
+@pytest.mark.parametrize("filename", ["stanley-cups.tsv", "stanley-cups-with-emoji.tsv"])
+def test_partition_tsv_with_json(filename: str):
+    elements = partition_tsv(example_doc_path(filename))
+    assert_round_trips_through_JSON(elements)

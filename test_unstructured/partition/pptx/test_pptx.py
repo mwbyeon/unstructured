@@ -19,9 +19,9 @@ from unstructured.documents.elements import (
     Text,
     Title,
 )
-from unstructured.partition.json import partition_json
 from unstructured.partition.pptx import _PptxPartitioner, partition_pptx
-from unstructured.staging.base import elements_to_json
+
+from ...unit_utils import assert_round_trips_through_JSON, example_doc_path
 
 DIRECTORY = pathlib.Path(__file__).parent.resolve()
 EXAMPLE_DOCS_DIRECTORY = os.path.join(DIRECTORY, "..", "..", "..", "example-docs")
@@ -360,15 +360,8 @@ def test_partition_pptx_from_file_with_custom_metadata_date(mocker: MockFixture)
 
 
 def test_partition_pptx_with_json():
-    filename = os.path.join(EXAMPLE_DOCS_DIRECTORY, "fake-power-point.pptx")
-    elements = partition_pptx(filename=filename)
-    test_elements = partition_json(text=elements_to_json(elements))
-
-    assert len(elements) == len(test_elements)
-    assert elements[0].metadata.filename == test_elements[0].metadata.filename
-
-    for i in range(len(elements)):
-        assert elements[i] == test_elements[i]
+    elements = partition_pptx(example_doc_path("fake-power-point.pptx"))
+    assert_round_trips_through_JSON(elements)
 
 
 def test_add_chunking_strategy_by_title_on_partition_pptx():
