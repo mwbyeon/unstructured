@@ -191,15 +191,6 @@ def partition_docx(
 class _DocxPartitioner:
     """Provides `.partition()` for MS-Word 2007+ (.docx) files."""
 
-    # TODO: improve `._element_contains_pagebreak()`. It uses substring matching on the rendered
-    #       XML text which is error-prone and not performant. Use XPath instead with the specific
-    #       locations a page-break can be located. Also, there can be more than one, so return a
-    #       count instead of a boolean.
-
-    # TODO: Improve document-contains-pagebreaks algorithm to use XPath and to search for
-    #       `w:lastRenderedPageBreak` alone. Make it independent and don't rely on anything like
-    #        the "_element_contains_pagebreak()" function.
-
     # TODO: Improve ._is_list_item():
     #     - Include list-style check such that ._is_list_item() is definitive and strictly fulfills
     #       its contract. This allows it to be used in other contexts without relying on
@@ -279,26 +270,25 @@ class _DocxPartitioner:
 
     @lazyproperty
     def _document_contains_pagebreaks(self) -> bool:
-        """True when there is at least one page-break detected in the document."""
-        return self._element_contains_pagebreak(self._document._element)
+        """True when there is at least one page-break detected in the document.
 
-    def _element_contains_pagebreak(self, element: BaseOxmlElement) -> bool:
-        """True when `element` contains a page break.
-
-        Checks for both "hard" page breaks (page breaks explicitly inserted by the user)
-        and "soft" page breaks, which are sometimes inserted by the MS Word renderer.
-        Note that soft page breaks aren't always present. Whether or not pages are
-        tracked may depend on your Word renderer.
+        Only `w:lastRenderedPageBreak` elements reliably indicate a page-break. These are reliably
+        inserted by Microsoft Word, but probably don't appear in documents converted into .docx
+        format from for example .odt format.
         """
-        page_break_indicators = [
-            ["w:br", 'type="page"'],  # "Hard" page break inserted by user
-            ["lastRenderedPageBreak"],  # "Soft" page break inserted by renderer
-        ]
-        if hasattr(element, "xml"):
-            for indicators in page_break_indicators:
-                if all(indicator in element.xml for indicator in indicators):
-                    return True
-        return False
+        xpath = (
+            # -- w:lastRenderedPageBreak (lrpb) is run (w:r) inner content --
+            # -- w:r can appear in a paragraph (w:p) --
+            "./w:body/w:p/w:r/w:lastRenderedPageBreak"
+            # -- w:r can also appear in a hyperlink (w:hyperlink), which is w:p inner-content --
+            " | ./w:body/w:p/w:hyperlink/w:r/w:lastRenderedPageBreak"
+            # -- and both of these can occur inside a table-cell as well as the document body --
+            " | ./w:body/w:tbl/w:tr/w:tc/w:p/w:r/w:lastRenderedPageBreak"
+            " | ./w:body/w:tbl/w:tr/w:tc/w:p/w:hyperlink/w:r/w:lastRenderedPageBreak"
+        )
+
+        # -- True if at least one `w:lastRenderedPageBreak` element is present, False otherwise. --
+        return bool(self._document.element.xpath(xpath))
 
     def _increment_page_number(self) -> Iterator[PageBreak]:
         """Increment page-number by 1 and generate a PageBreak element if enabled."""
@@ -367,7 +357,6 @@ class _DocxPartitioner:
         def has_page_break_implementation_we_have_so_far() -> bool:
             """Needs to become more sophisticated."""
             page_break_indicators = [
-                ["w:br", 'type="page"'],  # "Hard" page break inserted by user
                 ["lastRenderedPageBreak"],  # "Soft" page break inserted by renderer
             ]
             for indicators in page_break_indicators:

@@ -345,6 +345,8 @@ def _add_regex_metadata(
 class Element(abc.ABC):
     """An element is a section of a page in the document."""
 
+    category = ""
+
     def __init__(
         self,
         element_id: Union[str, uuid.UUID, NoID, UUID] = NoID(),
